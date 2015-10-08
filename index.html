@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="us">
+<head>
+    <meta charset="utf-8">
+    <title>Measurements</title>
+    <link href="base.css" rel="stylesheet">
+    <link href="jquery-ui.css" rel="stylesheet">
+
+    <style type="text/css">
+    g.highlighted path, g.selected.highlighted path {
+        stroke: #C05 !important;
+        fill:#F15 !important;       
+        stroke-width:9px !important;
+    }
+
+    g.selected path {
+        fill:#FF1000 !important;
+        stroke:#AA0101 !important;
+        stroke-width:7px !important;
+    }   
+    #tabs .ui-widget-content {
+        background: none;
+    }
+
+    input.measurementValue{
+        
+    }
+
+    </style>
+
+</head>
+<body>
+
+<div id='content-wrapper' class='clearfix row'>
+<div class='content-left twelve columns'>
+<div id='content'>
+    <div id='tabs'>
+        <h3>User Settings</h3>
+        <div id='userSettings'>
+            <div data-bind="with: personal">
+                <label for="userName">Name:</label>
+                <input type="text" id="userName" name="userName" data-bind="value: $data['given-name']">
+            </div>
+            <div data-bind="with: personal">
+                <label for="userLastName">Last Name:</label>
+                <input type="text" id="userLastName" name="userLastName" data-bind="value: $data['family-name']">
+            </div>
+            <div data-bind="with: personal">
+                <label for="userDoB">Date of Birth:</label>
+                <input type="text" id="userDoB" name="userDoB" data-bind="value: $data['birth-date']">
+            </div>
+            <div data-bind="with: personal">
+                <label for="userSex">Sex:</label>
+                <select name="userSex" id="userSex" data-bind="value: sex">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div data-bind="with: personal">
+                <label for="userEmail">Email:</label>
+                <input type="text" id="userEmail" name="userEmail"  data-bind="value: email">
+            </div>
+            <div data-bind="with: measurements">
+                <label for="measurementUnit">Measurement Unit:</label>
+                <select name="measurementUnit" id="measurementUnit" data-bind="value: unit">
+                    <option value="cm">CM</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+
+        </div>
+        <h3>A - Direct Height</h3>
+        <div id='tabs-a'>            
+        </div>
+        
+        <h3>B - Direct Width</h3>
+        <div id='tabs-b'>   
+
+        </div>
+        
+        <h3>C - Identation</h3>
+        <div id='tabs-c'>       
+        </div>
+        
+        <h3>D - Circumference, Arc &amp; Half Arc</h3>
+        <div id='tabs-d'>       
+        </div>
+        
+        <h3>E - Vertical</h3>
+        <div id='tabs-e'>       
+        </div>
+        
+        <h3>F - Horizontal</h3>
+        <div id='tabs-f'>       
+        </div>
+        
+        <h3>G - Bust</h3>
+        <div id='tabs-g'>       
+        </div>
+        
+        <h3>H - Balance</h3>
+        <div id='tabs-h'>       
+        </div>
+        
+        <h3>I - Arm</h3>
+        <div id='tabs-i'>       
+        </div>
+        
+        <h3>J - Leg</h3>
+        <div id='tabs-j'>       
+        </div>
+        
+        <h3>K - Crotch &amp; Rise</h3>
+        <div id='tabs-k'>       
+        </div>
+        
+        <h3>L - Hand</h3>
+        <div id='tabs-l'>       
+        </div>
+
+        <h3>M - Foot</h3>
+        <div id='tabs-m'>       
+        </div>
+
+        <h3>N - Head</h3>
+        <div id='tabs-n'>       
+        </div>
+
+        <h3>O - Men &amp; Tailoring</h3>
+        <div id='tabs-o'>       
+        </div>
+        <h3>P - Historical &amp; Speciality</h3>
+        <div id='tabs-p'>       
+        </div>
+
+        <h3>Q - Patternmaking measurements</h3>
+        <div id='tabs-q'>       
+        </div>
+        
+        <h3>All Measurements Grid</h3>
+        <div id='all-measurements'>
+
+        </div>
+    </div>
+</div>
+
+<div id='sidebar'>
+    <div data-bind="visible: currentMeasure() != null" id='editor'>
+        <h3 data-bind="text: getMeasureName()"></h3>
+        <span data-bind="text: getMeasureDescription()"></span>
+        <div data-bind="with: currentMeasure">
+            <input id='tbMeasurementValue' type='text' class="measurementValue" data-bind="spinner: value, spinnerOptions: {step: 0.01, min:0}" >
+        </div>
+    </div>
+
+    <input id="generate" type="button" value="Generate"  onclick="generateXml()" />
+</div>
+</div>
+</div>
+
+<script src="jquery-2.1.4.min.js"></script>
+<script src="jquery-ui.min.js"></script>
+<script src="snap.svg-min.js"></script>
+<script src="jquery.sticky-kit.min.js"></script>
+<script src="knockout-3.3.0.js"></script>
+<script src="Blob.js"></script>
+<script src="FileSaver.min.js"></script>
+<script src="metrics.js"></script>
+<script src="measurementsModel.js"></script>
+<script>
+
+/*
+TODO:
+- implement grid
+- finish mapping
+- automatically calculated values
+*/
+
+    var viewModel = {
+        currentMeasureEl: ko.observable(null),
+        currentMeasure : ko.observable(null),
+        metrics: metrics
+    };
+
+    viewModel.currentMeasureEl.subscribe(function(newValue){
+        if (!newValue)
+            return;
+
+        var id = newValue[0].id;
+
+        if (!id)
+            return;
+
+        var item = metrics[id.replace('measurement-group-', '')];
+        viewModel.currentMeasure(item);
+    });
+
+    viewModel.getMeasureName = ko.pureComputed(function(){
+        var cm = this.currentMeasure();
+        if (!cm)
+            return;
+
+        return cm.name;
+    }, viewModel);
+
+    viewModel.getMeasureDescription = ko.pureComputed(function(){
+        var cm = this.currentMeasure();
+        if (!cm)
+            return;
+        return cm.description;
+    }, viewModel);
+
+    ko.bindingHandlers.spinner = {
+        init: function(element, valueAccessor, allBindingsAccessor) {
+            //initialize datepicker with some optional options
+            var options = allBindingsAccessor().spinnerOptions || {};
+            $(element).spinner(options);
+
+            //handle the field changing
+            ko.utils.registerEventHandler(element, "spinchange", function () {
+                var observable = valueAccessor();
+                observable($(element).spinner("value"));
+            });
+
+            //handle disposal (if KO removes by the template binding)
+            ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+                $(element).spinner("destroy");
+            });
+
+        },
+        update: function(element, valueAccessor) {
+            var value = ko.utils.unwrapObservable(valueAccessor()),
+                current = $(element).spinner("value");
+
+            if (value !== current) {
+                $(element).spinner("value", value);
+            }
+        }
+    };
+    
+    ko.applyBindings(viewModel, document.getElementById('sidebar'));
+    ko.applyBindings(viewModel, document.getElementById('all-measurements'));
+    ko.applyBindings(measurementsModel, document.getElementById('userSettings'));
+
+
+
+    $(document).ready(function(){
+
+        $('#tabs').accordion({
+            heightStyle:'content',
+            beforeActivate: function( event, ui ) {
+                var newPanel = $(ui.newPanel);
+                if (ui.newPanel && newPanel.children('svg').length==0 && newPanel[0].id.contains('tabs-')){
+                    var svgId = 'svg-'+newPanel[0].id;
+                    var svg = $('<svg/>', {
+                        id:svgId
+                    });
+                    newPanel.append("<svg id='"+svgId +"' height='560' width='750'></svg>");
+
+                    var img = Snap('#'+ svgId);
+                    var url = 'measurements/'+ svgId.replace("svg-tabs-", '') + '.svg';
+                    Snap.load(url, function(f){
+                        var svgNode = $(f.node).children('svg')[0];
+                        var width = $(svgNode).attr('width');
+                        var height = $(svgNode).attr('height');
+                        img.attr({height:height, width:width});
+
+                        img.append(f);
+                        var measurements = $("#" + svgId + " g[inkscape\\:label='measurement']");
+                        measurements.click(onMeasurementClick);
+                        measurements.hover(addHighlight, clearHighlight);
+                    });
+                }   
+            }
+        });
+
+        $("#sidebar").stick_in_parent();
+    });
+    
+    function onMeasurementClick(e){
+        toggleClass(viewModel.currentMeasureEl(), 'selected');
+        viewModel.currentMeasureEl($(e.delegateTarget));
+        toggleClass(viewModel.currentMeasureEl(), 'selected');
+    }
+
+    function addHighlight(e){
+        var measure = $(e.delegateTarget);
+        toggleClass(measure, 'highlighted');
+    }
+
+    function clearHighlight(e){
+        var measure = $(e.delegateTarget);
+        toggleClass(measure, 'highlighted');
+    }
+
+    function toggleClass(el, css){
+        if (el){
+            var elCss = el.attr('class') || '';
+            if (elCss.contains(css)){
+                elCss = elCss.replace(css, '');
+            }
+            else{
+                elCss = elCss + ' ' + css;
+            }
+
+            el.attr('class', elCss);
+        }
+    }
+
+    function generateXml(){
+        try{
+            var xml = $($.parseXML("<?xml version='1.0' encoding='UTF-8'?><vit xmlns='http://www.w3.org/1999/xhtml'><version>0.2.0</version></vit>"));
+
+            var vit = $('vit', xml);
+
+            for (var key in measurementsModel){
+                if (key && Object.prototype.hasOwnProperty.call(measurementsModel, key)){
+                    appendItems(xml, vit, key, measurementsModel[key])
+                }
+            }
+
+            var data = (new XMLSerializer()).serializeToString(xml.context);
+			var blob = new Blob([data], {type: "text/xml;charset=utf-8"});
+			saveAs(blob, 'measurements.vit');
+        } catch(e){
+            alert('Some error occured: '+ e.message);
+        }
+    }
+
+    function appendItems(xml, root, sectionName, items){
+        var section = $('<' + sectionName+'/>');
+
+        for(var item in items){
+            if (item && Object.prototype.hasOwnProperty.call(items, item)){
+                var isValue = ko.isObservable(items[item]) || ko.isComputed(items[item]);
+
+                if (isValue){
+                    var value = 0;
+                    if (items[item]){
+                        value = items[item]();
+                    }
+
+                    var itemEl = $('<'+item+'/>');
+                    itemEl.attr('value', value);
+                    section.append(itemEl);
+                }
+                else{
+                    appendItems(xml, section, item, items[item]);                
+                }
+            }
+        }
+
+        root.append(section);
+    }
+
+</script>
+</body>
+</html>
