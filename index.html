@@ -170,6 +170,10 @@
 <script src="measurementsModel.js"></script>
 <script>
 
+    String.prototype.contains = function (s) {
+        return this.indexOf(s) !== -1;
+    }
+
 /*
 TODO:
 - implement grid
