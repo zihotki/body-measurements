@@ -251,7 +251,7 @@ TODO:
             heightStyle:'content',
             beforeActivate: function( event, ui ) {
                 var newPanel = $(ui.newPanel);
-                if (ui.newPanel && newPanel.children('svg').length==0 && newPanel[0].id.contains('tabs-')){
+                if (ui.newPanel && newPanel.children('svg').length==0 && newPanel[0].id.indexOf('tabs-') !== -1){
                     var svgId = 'svg-'+newPanel[0].id;
                     var svg = $('<svg/>', {
                         id:svgId
@@ -297,7 +297,7 @@ TODO:
     function toggleClass(el, css){
         if (el){
             var elCss = el.attr('class') || '';
-            if (elCss.contains(css)){
+            if (elCss.indexOf(css) !== -1){
                 elCss = elCss.replace(css, '');
             }
             else{
